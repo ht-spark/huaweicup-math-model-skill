@@ -1,0 +1,4 @@
+interface:
+  display_name: "Perfect Figures"
+  short_description: "Create and audit submission-ready scientific figures"
+  default_prompt: "Use $perfect-figures to create and audit a submission-ready scientific figure from these data."

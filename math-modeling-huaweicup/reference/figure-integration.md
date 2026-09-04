@@ -1,8 +1,8 @@
 # 华为杯竞赛绘图规范（内置 Python 路线）
 
-本 Skill 已在同级目录内嵌完整的 `nature-figure/` 组件（含 `agents/`、`assets/`、`evals/`、`references/`、`scripts/`、`static/` 和 `tests/`），并同时内嵌了它所需的 `nature-shared/` 共享资源。本文件仅定义华为杯竞赛适配，不替代该组件的完整图表论证、模板和质量审查能力。
+本 Skill 已在同级目录内嵌完整的 `perfect-figures/` 组件（含 `agents/`、`assets/`、`evals/`、`references/`、`scripts/`、`static/` 和 `tests/`），并同时内嵌了它所需的 `nature-shared/` 共享资源。本文件仅定义华为杯竞赛适配，不替代该组件的完整图表论证、模板和质量审查能力。
 
-绘图时直接读取 `../nature-figure/SKILL.md`，明确选择 Python，并按其路由加载 Python 片段和与当前任务相关的资源。该目录是本 Skill 的组成部分：不得检查、调用或依赖原目录中的外部安装版本，也不得因外部版本不可用而跳过绘图流程。
+绘图时直接读取 `../perfect-figures/SKILL.md`，明确选择 Python，并按其路由加载 Python 片段和与当前任务相关的资源。该目录是本 Skill 的组成部分：不得检查、调用或依赖原目录中的外部安装版本，也不得因外部版本不可用而跳过绘图流程。
 
 所有竞赛数据图均使用 Python 的 matplotlib / seaborn 生成。
 
@@ -105,12 +105,12 @@ def save_competition_figure(fig, path_without_suffix, important=False):
 对每个最终图，使用内嵌组件中的本地脚本执行检查。脚本路径均相对于当前 Skill 根目录：
 
 ```powershell
-python nature-figure/scripts/validate_figure.py path/to/figure.py
-python nature-figure/scripts/audit_pdf_text.py path/to/figure.pdf --min-pt 5
-python nature-figure/scripts/audit_figure_collisions.py path/to/figure.pdf --json-out path/to/figure.collision-audit.json
+python perfect-figures/scripts/validate_figure.py path/to/figure.py
+python perfect-figures/scripts/audit_pdf_text.py path/to/figure.pdf --min-pt 5
+python perfect-figures/scripts/audit_figure_collisions.py path/to/figure.pdf --json-out path/to/figure.collision-audit.json
 ```
 
-多面板图还应使用内嵌的 `nature-figure/scripts/audit_panel_alignment.py` 在最终布局后检查可比较面板的绘图区对齐；绘图脚本应调用其中的 `require_matplotlib_panel_alignment()`。脚本报告的阻断性失败必须修复后再交付；无法执行的检查应在说明文档中记录原因，不得宣称已通过。
+多面板图还应使用内嵌的 `perfect-figures/scripts/audit_panel_alignment.py` 在最终布局后检查可比较面板的绘图区对齐；绘图脚本应调用其中的 `require_matplotlib_panel_alignment()`。脚本报告的阻断性失败必须修复后再交付；无法执行的检查应在说明文档中记录原因，不得宣称已通过。
 
 ## 竞赛边界
 
