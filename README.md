@@ -46,25 +46,25 @@
 下载或克隆本仓库后，在仓库根目录打开 PowerShell，执行：
 
 ```powershell
-$codexSkillDir = if ($env:CODEX_HOME) {
-    Join-Path $env:CODEX_HOME "skills"
+codexSkillDir = if (env:CODEX_HOME) {
+    Join-Path env:CODEX_HOME "skills"
 } else {
-    Join-Path $env:USERPROFILE ".codex\skills"
+    Join-Path env:USERPROFILE ".codex\skills"
 }
 
-New-Item -ItemType Directory -Force -Path $codexSkillDir | Out-Null
+New-Item -ItemType Directory -Force -Path codexSkillDir | Out-Null
 
-$mathSkillDir = Join-Path $codexSkillDir "math-modeling-huaweicup"
-$paperSkillDir = Join-Path $codexSkillDir "paper-writing-huaweicup"
+mathSkillDir = Join-Path codexSkillDir "math-modeling-huaweicup"
+paperSkillDir = Join-Path codexSkillDir "paper-writing-huaweicup"
 
-New-Item -ItemType Directory -Force -Path $mathSkillDir | Out-Null
-New-Item -ItemType Directory -Force -Path $paperSkillDir | Out-Null
+New-Item -ItemType Directory -Force -Path mathSkillDir | Out-Null
+New-Item -ItemType Directory -Force -Path paperSkillDir | Out-Null
 
 Copy-Item -Path ".\math-modeling-huaweicup-skill\*" `
-    -Destination $mathSkillDir -Recurse -Force
+    -Destination mathSkillDir -Recurse -Force
 
 Copy-Item -Path ".\paper-writing-huaweicup-skill\*" `
-    -Destination $paperSkillDir -Recurse -Force
+    -Destination paperSkillDir -Recurse -Force
 ```
 
 复制完成后重新打开 Codex，使技能目录被重新读取。
@@ -163,7 +163,7 @@ modeling_output/
 ### 根据问题一结果撰写报告章节
 
 ```text
-$paper-writing-huaweicup
+paper-writing-huaweicup
 
 读取 upload_material 和 modeling_output，只撰写问题一对应的报告章节。
 完整介绍建模动机、公式、求解方法、结果和验证；采用必要的图表，并解释每张图表的核心信息和结论边界。
@@ -215,11 +215,11 @@ paper-writing-huaweicup
 ```text
 准备题目、数据和规范
         ↓
-调用 $math-modeling-huaweicup
+调用 math-modeling-huaweicup
         ↓
 检查 modeling_output 中的模型、结果和验证证据
         ↓
-调用 $paper-writing-huaweicup
+调用 paper-writing-huaweicup
         ↓
 检查 report_output 中的报告、证据映射和待补充项
         ↓
