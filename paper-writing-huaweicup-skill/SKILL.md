@@ -80,7 +80,7 @@ description: 基于当前项目中的华为杯数学建模题目、官方规范�
 | 假设、符号                     | `references/assumptions.md`、`references/symbols.md`                                                                                                            | `data-processing.md`                                              |
 | 总体思路                       | `references/overall-approach.md`                                                                                                                                  | `problem-analysis.md`、`modeling.md`                            |
 | 某小问的分析、建模、求解与结果 | `references/problem-analysis.md`、`references/modeling.md`、`references/solution.md`、`references/validation.md`、`references/figures-tables-formulas.md` | `data-processing.md`                                              |
-| 图表、公式写作或对应内容审查   | `references/figures-tables-formulas.md`                                                                                                                           | 所在章节的写作逻辑文件                                              |
+| 图表、公式写作、DOCX 排版或对应内容审查 | `references/figures-tables-formulas.md`                                                                                                                     | 所在章节的写作逻辑文件、`scripts/render_docx.py`                    |
 | 模型评价、结论                 | `references/model-evaluation.md`、`references/conclusion.md`                                                                                                    | 各小问的证据映射                                                    |
 | 参考文献、附录                 | `references/references.md`、`references/appendix.md`                                                                                                            | 当届规范                                                            |
 | 改写、润色或终稿语言审查       | `humanizer-chinese-math-modeling/SKILL.md`、`references/figures-tables-formulas.md`                                                                             | `humanizer-chinese-math-modeling/references/section-contracts.md` |
@@ -99,7 +99,7 @@ description: 基于当前项目中的华为杯数学建模题目、官方规范�
 
 各章节参考文件中的“落地示例”用于校准信息密度、论证顺序和段落衔接。使用时先执行该文件的写作规则，再按当前题目的证据替换示例占位符；不得迁移示例的题目事实、模型选择、公式、参数、数值、结论或引用。示例与当前项目证据冲突时，始终服从题目、当届规范和建模证据；不为贴近示例而补造缺失内容。
 
-## 图表采用与 Markdown 嵌入
+## 图表采用与 Markdown / DOCX 交付
 
 图表是结果证据的一部分，不能只在正文写“见图 X”或只把源文件路径放进附录。对每个已完成、且建模产物中存在可用图或表的小问：
 
@@ -122,6 +122,8 @@ description: 基于当前项目中的华为杯数学建模题目、官方规范�
 5. 图题和表题准确说明“对象 + 指标或关系 + 必要条件”，不使用“结果图”“数据表”等空泛标题，也不把结论写进标题。图注、表注按需说明图形编码、样本范围、单位、统计口径、缩写和来源。具体构成及示例见 `references/figures-tables-formulas.md`。
 6. 每张图表前必须有导入句，说明它服务于哪个比较、判断或验证；图表后必须有正文解读，指出最关键的差异、趋势、转折、异常或数量关系，并说明它支持哪项结论。不得逐点复述，也不得只放图表不分析。
 7. 若候选图表因分辨率、可读性、内容重复、与正文结论无关或当届规范限制而未采用，在 `写作审查.md` 说明原因。没有可用图表时也必须记录“未提供可采用图表”，而不是伪造图表。
+8. `报告.md` 中的 Markdown 表是数据源，正式 `报告.docx` 中对应表格必须全部转换为三线表：仅保留顶线、表头线和底线，不使用竖线、内部网格或底纹。默认线宽及跨页表头要求见 `references/figures-tables-formulas.md`。
+9. `报告.md` 中的 LaTeX 数学语法是公式源稿，正式 `报告.docx` 中必须转换为 Word 原生、可编辑的 Office Math；不得以图片或原始 LaTeX 字符串代替。行间公式居中，编号同一行右对齐。
 
 ## 执行流程
 
@@ -163,13 +165,23 @@ description: 基于当前项目中的华为杯数学建模题目、官方规范�
 - 是否存在未经证据支持的效果宣称、验证结论或参考文献；
 - 去 AI 味修订是否保持原有模型、变量、数据、引用与结论边界。
 
+### 6. 渲染并检查 DOCX
+
+只要本次任务新写或修改了包含公式、表格的报告正文，除保存 `报告.md` 外，还必须使用 `scripts/render_docx.py` 生成 `报告.docx`。只做审查且未修改正文时可不渲染。
+
+1. 若 `upload_material/规范N.*` 提供官方 DOCX 模板，将其作为脚本的 `--reference-doc`；否则使用 Pandoc 默认参考文档，并在 `写作审查.md` 说明未发现官方模板。
+2. 转换后确认所有行内与行间公式均为 Office Math，不存在公式截图或原始 LaTeX；带 `\tag{...}` 的公式编号必须保留为 `(1)`、`(2)` 或 `(4.1)` 等形式，并在同一行右对齐。
+3. 确认所有正文语义表格均为三线表，表头线、顶线和底线完整，没有竖线、内部网格或底纹；表题、表注仍位于表格外部。
+4. 核对 DOCX 中的公式、表格、图片、图表编号和文字与 `报告.md` 一致。脚本校验未通过时不得交付 DOCX。
+
 ## 交付规则
 
 所有新生成内容只写入 `<项目根目录>/report_output/`。默认交付如下：
 
 ```text
 report_output/
-├── 报告.md                         # 草稿、完整报告或用户指定的章节；实际嵌入已采用图片和表格
+├── 报告.md                         # 可审阅、可追溯的源稿；实际嵌入已采用图片和表格
+├── 报告.docx                       # 正式排版稿；公式为 Office Math，表格为三线表
 ├── 图片/                           # 仅复制正文实际采用的图片
 │   ├── common/                    # 正文采用的跨问题共享图片；按需创建
 │   ├── Q1/
@@ -185,9 +197,9 @@ report_output/
 └── 待补充材料.md                   # 仅在存在缺失或待核对内容时创建
 ```
 
-- 最终提交格式（如 DOCX、PDF、LaTeX 或指定模板）以当届 `规范N` 和用户要求为准；未明确要求时，先交付可审阅的 `报告.md`，不要擅自声称已满足某种提交格式。
+- 最终提交格式仍以当届 `规范N` 和用户要求为准。未明确要求时，写作或修改报告正文默认同时交付 `报告.md` 与 `报告.docx`；DOCX 中的公式必须是 Office Math，语义表格必须是三线表。若规范另行指定 PDF、LaTeX 或专用模板，再追加相应格式，不能擅自声称默认 DOCX 已满足当届全部格式要求。
 - `报告证据映射.yaml` 必须是可解析的 YAML，不得在 `.yaml` 文件中写 Markdown 标题或表格。至少记录 `sections`（`Qn`、章节/小问、正文结论摘要、验证状态）、`artifacts`（所属 `Qn` 或 `common`、建模源路径、报告输出相对路径、类型、报告图/表号、使用方式、支撑结论）及 `open_items`。每一张正文图片和每一张正文表均需有一条 `artifacts` 记录。
 - `写作审查.md` 至少记录：读取的规范文件、适用/未适用条款、按 `Qn` 分组的证据一致性结果、按 `Qn/common` 分组的图表候选清单与采用/未采用理由、结构检查、去 AI 味修订边界与遗留风险。
-- 若仅请求一个章节，则只创建该章节对应的 Markdown 文件，并仍提供必要的证据映射和待核对说明；不得覆盖已有完整报告。
+- 若仅请求一个章节，则创建该章节对应的 Markdown 文件；正文包含公式或表格时同步生成同名 DOCX，并仍提供必要的证据映射和待核对说明，不得覆盖已有完整报告。
 
 完成时向用户简要说明：已读取哪些材料、生成了哪些文件、哪些内容仍需建模或用户补充后才能定稿。
