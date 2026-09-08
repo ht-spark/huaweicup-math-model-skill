@@ -8,6 +8,8 @@ competition-paper formatting that Pandoc does not express by itself:
   labels placed at the right margin;
 * every semantic table uses a three-line layout (top rule, header rule,
   bottom rule) with no vertical or internal grid lines.
+* figure captions are centered below their images and table captions are
+  centered above their tables.
 """
 
 from __future__ import annotations
@@ -24,14 +26,23 @@ from zipfile import ZipFile
 
 from docx import Document
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Mm
+from docx.text.paragraph import Paragraph
 
 
 DISPLAY_MATH_RE = re.compile(r"(?<!\\)\$\$(.*?)(?<!\\)\$\$", re.DOTALL)
 TAG_RE = re.compile(r"\\tag\s*\{([^{}]+)\}")
 FULLWIDTH_TRAILING_PUNCTUATION_RE = re.compile(r"[，；。]\s*$")
+FIGURE_CAPTION_RE = re.compile(r"^图\s*\d+(?:[.-]\d+)*\s+\S")
+TABLE_CAPTION_RE = re.compile(r"^表\s*\d+(?:[.-]\d+)*\s+\S")
+CAPTION_SECTION_PREFIX_RE = re.compile(
+    r"^[图表]\s*\d+(?:[.-]\d+)*\s*"
+    r"(?:问题[一二三四五六七八九十百\d]+|第[一二三四五六七八九十百\d]+问|Q\d+)",
+    re.IGNORECASE,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -149,6 +160,52 @@ def apply_three_line_table(table) -> None:
     header.set(qn("w:val"), "true")
 
 
+def find_caption_paragraphs(document: Document) -> tuple[list[Paragraph], list[Paragraph]]:
+    """Find captions by both their label and position next to a figure/table."""
+
+    body = list(document.element.body)
+    significant = []
+    for element in body:
+        if element.tag == qn("w:tbl"):
+            significant.append(element)
+        elif element.tag == qn("w:p"):
+            paragraph = Paragraph(element, document)
+            if paragraph.text.strip() or element.xpath(".//w:drawing | .//w:pict"):
+                significant.append(element)
+
+    figure_captions: list[Paragraph] = []
+    table_captions: list[Paragraph] = []
+    for index, element in enumerate(significant):
+        if element.tag != qn("w:p"):
+            continue
+        paragraph = Paragraph(element, document)
+        text = paragraph.text.strip()
+        previous = significant[index - 1] if index > 0 else None
+        following = significant[index + 1] if index + 1 < len(significant) else None
+
+        follows_figure = (
+            previous is not None
+            and previous.tag == qn("w:p")
+            and bool(previous.xpath(".//w:drawing | .//w:pict"))
+        )
+        precedes_table = following is not None and following.tag == qn("w:tbl")
+        if follows_figure and FIGURE_CAPTION_RE.match(text):
+            figure_captions.append(paragraph)
+        if precedes_table and TABLE_CAPTION_RE.match(text):
+            table_captions.append(paragraph)
+
+    return figure_captions, table_captions
+
+
+def apply_caption_alignment(document: Document) -> tuple[int, int]:
+    """Center figure captions below images and table captions above tables."""
+
+    figure_captions, table_captions = find_caption_paragraphs(document)
+    for paragraph in (*figure_captions, *table_captions):
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    return len(figure_captions), len(table_captions)
+
+
 def apply_default_page_layout(document: Document) -> None:
     """Use deterministic A4 geometry when no official reference DOCX is supplied."""
 
@@ -253,7 +310,7 @@ def validate_docx(
     expected_tables: int,
     expected_numbered: int,
     expect_office_math: bool,
-) -> tuple[int, int]:
+) -> tuple[int, int, int, int]:
     """Check that formulas are OMML and table border contracts are present."""
 
     with ZipFile(path) as archive:
@@ -321,7 +378,26 @@ def validate_docx(
             f"expected={expected_numbered}, actual={equation_number_count}."
         )
 
-    return office_math_count, equation_number_count
+    figure_captions, table_captions = find_caption_paragraphs(document)
+    for kind, captions in (("Figure", figure_captions), ("Table", table_captions)):
+        for index, paragraph in enumerate(captions, start=1):
+            if paragraph.alignment != WD_ALIGN_PARAGRAPH.CENTER:
+                raise RuntimeError(f"{kind} caption {index} is not centered.")
+            caption_text = paragraph.text.strip()
+            if CAPTION_SECTION_PREFIX_RE.match(caption_text):
+                raise RuntimeError(
+                    f"{kind} caption {index} starts with a question/section prefix; "
+                    "keep only the number and a concise content description."
+                )
+            if caption_text.startswith("*") or caption_text.endswith("*"):
+                raise RuntimeError(f"{kind} caption {index} contains a stray Markdown asterisk.")
+
+    return (
+        office_math_count,
+        equation_number_count,
+        len(figure_captions),
+        len(table_captions),
+    )
 
 
 def main() -> int:
@@ -355,7 +431,7 @@ def main() -> int:
         command = [
             pandoc,
             str(normalized_source),
-            "--from=markdown+tex_math_dollars",
+            "--from=markdown+tex_math_dollars-implicit_figures",
             "--to=docx",
             "--standalone",
             f"--resource-path={source.parent}",
@@ -371,10 +447,11 @@ def main() -> int:
     table_count = len(document.tables)
     for table in document.tables:
         apply_three_line_table(table)
+    figure_caption_count, table_caption_count = apply_caption_alignment(document)
     numbered_count = apply_equation_numbers(document, labels)
     document.save(output)
 
-    office_math_count, verified_numbered = validate_docx(
+    office_math_count, verified_numbered, verified_figures, verified_table_captions = validate_docx(
         output,
         expected_tables=table_count,
         expected_numbered=expected_numbered,
@@ -384,8 +461,12 @@ def main() -> int:
     print(f"Three-line tables: {table_count}")
     print(f"Editable Office Math objects: {office_math_count}")
     print(f"Right-aligned equation numbers: {verified_numbered}")
+    print(f"Centered figure captions: {verified_figures}")
+    print(f"Centered table captions: {verified_table_captions}")
     if numbered_count != verified_numbered:
         raise RuntimeError("Equation numbering changed during the final save.")
+    if figure_caption_count != verified_figures or table_caption_count != verified_table_captions:
+        raise RuntimeError("Caption detection changed during the final save.")
     return 0
 
 
